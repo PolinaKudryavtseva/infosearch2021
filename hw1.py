@@ -94,8 +94,8 @@ for character in characters:
 
 characters_freq = {}
 for key, values in characters_dict.items():
-    mentions = [X.T[value][0].toarray().sum() for value in values]
-    freq = sum(mentions)
+    inplot = [X.T[value][0].toarray().sum() for value in values]
+    freq = sum(inplot)
     characters_freq[key] = freq
 
 print("Самый статистически популярный персонаж:")
