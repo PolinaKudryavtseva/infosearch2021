@@ -1,15 +1,18 @@
-import os
-import re
-import nltk
-nltk.download("stopwords")
 from nltk.corpus import stopwords
 from tqdm import tqdm
 from pymorphy2 import MorphAnalyzer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+import os
+import re
+import nltk
+nltk.download("stopwords")
 
-patterns = "[A-Za-z0-9!#$%&'()*+,./:;<=>?@[\]^_`{|}~—\"\-]+"  # для удаления латиницы и пунктуации
-stopwords_ru = stopwords.words("russian")  # стандартный список стоп-слов
+# для удаления латиницы и пунктуации
+patterns = "[A-Za-z0-9!#$%&'()*+,./:;<=>?@[\]^_`{|}~—\"\-]+"
+# стандартный список стоп-слов
+stopwords_ru = stopwords.words("russian")
+# дополнительный список стоп-слов
 add_stopwords_ru = ["которых", "которые", "твой", "котйоро", "которого",
                     "сих", "ком", "свой", "твоя", "этими", "слишком",
                     "нами", "всему", "будь", "саму", "чаще", "ваше",
@@ -29,9 +32,10 @@ add_stopwords_ru = ["которых", "которые", "твой", "котйо�
                     "будут", "своего", "кого", "свои", "мог", "нам",
                     "особенно", "её", "самому", "наше", "кроме", "вообще",
                     "вон", "мною", "никто", "это", "ты", "как", "что",
-                    "не", "но", "ааааааа", "аааааау", "аба"]  # дополнительный список стоп-слов
+                    "не", "но", "ааааааа", "аааааау", "аба"]
 morph = MorphAnalyzer()
-vectorizer = TfidfVectorizer(analyzer='word')
+vectorizer = TfidfVectorizer()
+
 
 def preprocessing(text):
     clean_text = re.sub(patterns, " ", text)
@@ -46,6 +50,7 @@ def preprocessing(text):
             lemmas.remove(lemma)
     return " ".join(lemmas)
 
+
 def making_corpus(directory):
     filenames = []
     for path, dirs, files in os.walk(directory):
@@ -56,31 +61,39 @@ def making_corpus(directory):
         with open(file, encoding="utf-8") as f:
             text = f.read()
         lemmas = preprocessing(text)
-        corpus.append(' '.join(lemmas))
+        corpus.append(lemmas)
     return corpus, filenames
+
 
 def indexating_corpus(vectorizer, corpus):
     documentterm_matrix = vectorizer.fit_transform(corpus)
     return documentterm_matrix
 
-def indexating_query(vectorizer, query):
+
+def indexating_query(vectorizer, query, corpus_matrix):
+    vectorizer = vectorizer.fit(corpus_matrix)
     documentterm_matrix = vectorizer.transform([preprocessing(query)]).toarray()
     return documentterm_matrix
+
 
 def counting_similarity(query_matrix, corpus_matrix):
     cos_sim = cosine_similarity(query_matrix, corpus_matrix)
     return cos_sim
 
+
 def main():
-    corpus, filenames = making_corpus(directory)
+    corpus, filenames = making_corpus('/content/drive/MyDrive/Colab Notebooks/Инфопоиск/friends-data')
     corpus_matrix = indexating_corpus(vectorizer, corpus)
     while True:
         query = input("Введите запрос: ")
-        query_matrix = indexating_query(vectorizer, query)
+        query_matrix = indexating_query(vectorizer, query, corpus)
         cos_sim = counting_similarity(corpus_matrix, query_matrix)
-        answer = sorted(range(len(cos_sim.flatten())), key=lambda k: cos_sim.flatten()[k], reverse=True)
-        for item in answer:
-            print(filenames[item])
+        episodes = sorted(range(len(cos_sim)), key=lambda x: cos_sim[x], reverse=True)
+        for episode in episodes[0:10]:
+            print(filenames[episode])
+        continuesearch = input('Вы хотите продолжить поиск? напишите да/нет  ')
+        if continuesearch == 'нет':
+            break
 
 
 if __name__ == '__main__':
